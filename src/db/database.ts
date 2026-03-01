@@ -1,6 +1,6 @@
 import type { Database } from 'sql.js'
 import { get, set } from 'idb-keyval'
-import { SCHEMA } from './schema'
+import { SCHEMA, MIGRATIONS } from './schema'
 import { seedDatabase } from './seed'
 import { seedTemplates } from './seedTemplates'
 import { DB_KEY, AUTOSAVE_DELAY_MS } from '../lib/constants'
@@ -28,6 +28,9 @@ export async function initDatabase(): Promise<Database> {
 
   db.exec('PRAGMA foreign_keys = ON')
   db.exec(SCHEMA)
+  for (const migration of MIGRATIONS) {
+    try { db.exec(migration) } catch { /* column may already exist */ }
+  }
   seedDatabase(db)
   seedTemplates(db)
   await saveToIndexedDB()

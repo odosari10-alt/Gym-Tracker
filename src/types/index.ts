@@ -26,6 +26,7 @@ export interface WorkoutExercise {
   notes: string | null
   exercise_name?: string
   muscle_group_name?: string
+  superset_group: number | null
 }
 
 export interface Set {

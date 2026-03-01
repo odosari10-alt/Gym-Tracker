@@ -63,3 +63,7 @@ CREATE TABLE IF NOT EXISTS template_day_exercises (
   FOREIGN KEY (exercise_id) REFERENCES exercises(id)
 );
 `
+
+export const MIGRATIONS = [
+  'ALTER TABLE workout_exercises ADD COLUMN superset_group INTEGER DEFAULT NULL',
+]

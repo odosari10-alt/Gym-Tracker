@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react'
+import { Trash2, Unlink } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { SetRow } from './SetRow'
 import type { WorkoutExercise, Set, WeightUnit } from '../../types'
@@ -8,30 +8,62 @@ interface ExerciseCardProps {
   sets: Set[]
   unit: WeightUnit
   readOnly?: boolean
+  supersetColor?: string
   onAddSet: (workoutExerciseId: number) => void
   onUpdateSet: (setId: number, weightKg: number, reps: number, isWarmup: boolean, rpe: number | null) => void
   onDeleteSet: (setId: number) => void
   onRemoveExercise: (workoutExerciseId: number) => void
+  onSuperset?: (workoutExerciseId: number) => void
+  onUnlinkSuperset?: (supersetGroup: number) => void
 }
 
 export function ExerciseCard({
-  workoutExercise, sets, unit, readOnly,
-  onAddSet, onUpdateSet, onDeleteSet, onRemoveExercise
+  workoutExercise, sets, unit, readOnly, supersetColor,
+  onAddSet, onUpdateSet, onDeleteSet, onRemoveExercise,
+  onSuperset, onUnlinkSuperset
 }: ExerciseCardProps) {
+  const isSuperset = workoutExercise.superset_group != null
+
   return (
     <Card>
       <div className="flex items-center justify-between mb-3">
-        <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-text-primary truncate">{workoutExercise.exercise_name}</h3>
-          <p className="text-xs text-text-muted">{workoutExercise.muscle_group_name}</p>
+        <div className="min-w-0 flex-1 flex items-center gap-2">
+          {supersetColor && (
+            <span
+              className="w-1.5 h-8 rounded-full shrink-0"
+              style={{ backgroundColor: supersetColor }}
+            />
+          )}
+          <div className="min-w-0">
+            <h3 className="font-bold text-text-primary truncate">{workoutExercise.exercise_name}</h3>
+            <p className="text-xs text-text-muted">{workoutExercise.muscle_group_name}</p>
+          </div>
         </div>
         {!readOnly && (
-          <button
-            onClick={() => onRemoveExercise(workoutExercise.id)}
-            className="p-2 rounded-xl hover:bg-surface-hover text-text-muted hover:text-danger active:text-danger transition-colors shrink-0 ml-2"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <div className="flex items-center shrink-0 ml-2">
+            {isSuperset ? (
+              <button
+                onClick={() => onUnlinkSuperset?.(workoutExercise.superset_group!)}
+                className="p-2 rounded-xl hover:bg-surface-hover text-text-muted hover:text-primary active:text-primary transition-colors"
+                title="Unlink superset"
+              >
+                <Unlink className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => onSuperset?.(workoutExercise.id)}
+                className="px-2 py-1 rounded-xl hover:bg-surface-hover text-xs font-semibold text-text-muted hover:text-primary active:text-primary transition-colors"
+              >
+                Superset
+              </button>
+            )}
+            <button
+              onClick={() => onRemoveExercise(workoutExercise.id)}
+              className="p-2 rounded-xl hover:bg-surface-hover text-text-muted hover:text-danger active:text-danger transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         )}
       </div>
 

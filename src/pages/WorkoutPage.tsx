@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { ArrowLeft, Check, ClipboardList, ChevronRight, Play, Dumbbell } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
-import { startWorkout, finishWorkout, getActiveWorkout, addExerciseToWorkout, removeExerciseFromWorkout, getWorkoutExercises, deleteWorkout } from '../db/queries/workouts'
+import { startWorkout, finishWorkout, getActiveWorkout, addExerciseToWorkout, removeExerciseFromWorkout, getWorkoutExercises, deleteWorkout, linkSuperset, unlinkSuperset } from '../db/queries/workouts'
 import { getSetsForWorkoutExercise, addSet, updateSet, deleteSet } from '../db/queries/sets'
 import { getExercises, getMuscleGroups } from '../db/queries/exercises'
 import { getTemplatesWithDays, addTemplateDayToWorkout } from '../db/queries/templates'
@@ -25,7 +25,9 @@ export function WorkoutPage() {
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [expandedTemplate, setExpandedTemplate] = useState<number | null>(null)
   const [showFinish, setShowFinish] = useState(false)
+  const [showDiscard, setShowDiscard] = useState(false)
   const [refresh, setRefresh] = useState(0)
+  const [supersetPickerFor, setSupersetPickerFor] = useState<number | null>(null)
 
   const allExercises = useMemo(() => db ? getExercises(db) : [], [db])
   const muscleGroups = useMemo(() => db ? getMuscleGroups(db) : [], [db])
@@ -114,6 +116,56 @@ export function WorkoutPage() {
     navigate('/')
   }, [db, workoutId, save, navigate])
 
+  const handleSupersetSelect = useCallback((weId: number) => {
+    if (!db || supersetPickerFor == null) return
+    linkSuperset(db, supersetPickerFor, weId)
+    setSupersetPickerFor(null)
+    reload()
+  }, [db, supersetPickerFor])
+
+  const supersetCandidates = useMemo(() => {
+    if (supersetPickerFor == null) return []
+    return exercises.filter((e) => e.id !== supersetPickerFor && e.superset_group == null)
+  }, [exercises, supersetPickerFor])
+
+  const handleUnlinkSuperset = useCallback((supersetGroup: number) => {
+    if (!db) return
+    unlinkSuperset(db, supersetGroup)
+    reload()
+  }, [db])
+
+  const SUPERSET_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
+
+  const supersetColorMap = useMemo(() => {
+    const map = new Map<number, string>()
+    let colorIdx = 0
+    for (const ex of exercises) {
+      if (ex.superset_group != null && !map.has(ex.superset_group)) {
+        map.set(ex.superset_group, SUPERSET_COLORS[colorIdx % SUPERSET_COLORS.length])
+        colorIdx++
+      }
+    }
+    return map
+  }, [exercises])
+
+  // Group exercises: superset pairs are grouped together
+  const groupedExercises = useMemo(() => {
+    const groups: { supersetGroup: number | null; items: WorkoutExercise[] }[] = []
+    const seen = new Set<number>()
+    for (const ex of exercises) {
+      if (seen.has(ex.id)) continue
+      if (ex.superset_group != null) {
+        const partners = exercises.filter((e) => e.superset_group === ex.superset_group)
+        partners.forEach((p) => seen.add(p.id))
+        groups.push({ supersetGroup: ex.superset_group, items: partners })
+      } else {
+        seen.add(ex.id)
+        groups.push({ supersetGroup: null, items: [ex] })
+      }
+    }
+    return groups
+  }, [exercises])
+
   const presets = templates.filter((t) => t.is_preset)
   const custom = templates.filter((t) => !t.is_preset)
 
@@ -136,19 +188,6 @@ export function WorkoutPage() {
 
       <main className="flex-1 overflow-y-auto p-4" style={{ paddingBottom: 'calc(var(--safe-bottom) + 1rem)' }}>
         <div className="flex flex-col gap-4 max-w-lg mx-auto w-full">
-          {exercises.map((we) => (
-            <ExerciseCard
-              key={we.id}
-              workoutExercise={we}
-              sets={setsMap[we.id] ?? []}
-              unit={unit}
-              onAddSet={handleAddSet}
-              onUpdateSet={handleUpdateSet}
-              onDeleteSet={handleDeleteSet}
-              onRemoveExercise={handleRemoveExercise}
-            />
-          ))}
-
           <div className="flex flex-col gap-3">
             <button
               onClick={() => setShowPicker(true)}
@@ -163,12 +202,59 @@ export function WorkoutPage() {
               <ClipboardList className="h-5 w-5" /> Template
             </button>
             <button
-              onClick={handleDiscard}
+              onClick={() => setShowDiscard(true)}
               className="w-full text-center text-base font-semibold text-danger py-4 rounded-2xl hover:bg-danger/10 transition-colors"
             >
               Discard Workout
             </button>
           </div>
+
+          {groupedExercises.map((group) => {
+            const color = group.supersetGroup != null
+              ? supersetColorMap.get(group.supersetGroup)
+              : undefined
+
+            if (group.supersetGroup != null) {
+              return (
+                <div
+                  key={`ss-${group.supersetGroup}`}
+                  className="flex flex-col gap-2 rounded-2xl p-2 border-l-4"
+                  style={{ borderLeftColor: color }}
+                >
+                  {group.items.map((we) => (
+                    <ExerciseCard
+                      key={we.id}
+                      workoutExercise={we}
+                      sets={setsMap[we.id] ?? []}
+                      unit={unit}
+                      supersetColor={color}
+                      onAddSet={handleAddSet}
+                      onUpdateSet={handleUpdateSet}
+                      onDeleteSet={handleDeleteSet}
+                      onRemoveExercise={handleRemoveExercise}
+                      onUnlinkSuperset={handleUnlinkSuperset}
+                    />
+                  ))}
+                </div>
+              )
+            }
+
+            const we = group.items[0]
+            return (
+              <ExerciseCard
+                key={we.id}
+                workoutExercise={we}
+                sets={setsMap[we.id] ?? []}
+                unit={unit}
+                onAddSet={handleAddSet}
+                onUpdateSet={handleUpdateSet}
+                onDeleteSet={handleDeleteSet}
+                onRemoveExercise={handleRemoveExercise}
+                onSuperset={setSupersetPickerFor}
+              />
+            )
+          })}
+
         </div>
       </main>
 
@@ -179,6 +265,31 @@ export function WorkoutPage() {
         exercises={allExercises}
         muscleGroups={muscleGroups}
       />
+
+      <Modal
+        open={supersetPickerFor != null}
+        onClose={() => setSupersetPickerFor(null)}
+        title="Link Superset"
+      >
+        <div className="flex flex-col gap-1">
+          {supersetCandidates.length === 0 && (
+            <p className="text-sm text-text-muted text-center py-4">No other exercises to link</p>
+          )}
+          {supersetCandidates.map((we) => (
+            <button
+              key={we.id}
+              onClick={() => handleSupersetSelect(we.id)}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-surface-hover active:bg-surface transition-colors text-left w-full"
+            >
+              <Dumbbell className="h-4 w-4 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary truncate">{we.exercise_name}</p>
+                <p className="text-xs text-text-muted">{we.muscle_group_name}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Modal>
 
       <Modal
         open={showTemplatePicker}
@@ -218,6 +329,15 @@ export function WorkoutPage() {
         message="Save this workout and return to the home screen?"
         confirmLabel="Finish"
         variant="primary"
+      />
+
+      <ConfirmDialog
+        open={showDiscard}
+        onClose={() => setShowDiscard(false)}
+        onConfirm={handleDiscard}
+        title="Discard Workout"
+        message="Are you sure you want to discard workout?"
+        confirmLabel="Yes"
       />
     </div>
   )

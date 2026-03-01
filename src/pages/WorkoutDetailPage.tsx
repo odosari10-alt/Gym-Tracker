@@ -88,19 +88,44 @@ export function WorkoutDetailPage() {
             <p className="text-text-secondary text-sm italic">{workout.notes}</p>
           )}
 
-          {exercises.map((we) => (
-            <ExerciseCard
-              key={we.id}
-              workoutExercise={we}
-              sets={setsMap[we.id] ?? []}
-              unit={unit}
-              readOnly
-              onAddSet={() => {}}
-              onUpdateSet={() => {}}
-              onDeleteSet={() => {}}
-              onRemoveExercise={() => {}}
-            />
-          ))}
+          {(() => {
+            const SUPERSET_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
+            const colorMap = new Map<number, string>()
+            let colorIdx = 0
+            for (const ex of exercises) {
+              if (ex.superset_group != null && !colorMap.has(ex.superset_group)) {
+                colorMap.set(ex.superset_group, SUPERSET_COLORS[colorIdx % SUPERSET_COLORS.length])
+                colorIdx++
+              }
+            }
+            const groups: { supersetGroup: number | null; items: typeof exercises }[] = []
+            const seen = new Set<number>()
+            for (const ex of exercises) {
+              if (seen.has(ex.id)) continue
+              if (ex.superset_group != null) {
+                const partners = exercises.filter((e) => e.superset_group === ex.superset_group)
+                partners.forEach((p) => seen.add(p.id))
+                groups.push({ supersetGroup: ex.superset_group, items: partners })
+              } else {
+                seen.add(ex.id)
+                groups.push({ supersetGroup: null, items: [ex] })
+              }
+            }
+            return groups.map((group) => {
+              const color = group.supersetGroup != null ? colorMap.get(group.supersetGroup) : undefined
+              if (group.supersetGroup != null) {
+                return (
+                  <div key={`ss-${group.supersetGroup}`} className="flex flex-col gap-2 rounded-2xl p-2 border-l-4" style={{ borderLeftColor: color }}>
+                    {group.items.map((we) => (
+                      <ExerciseCard key={we.id} workoutExercise={we} sets={setsMap[we.id] ?? []} unit={unit} readOnly supersetColor={color} onAddSet={() => {}} onUpdateSet={() => {}} onDeleteSet={() => {}} onRemoveExercise={() => {}} />
+                    ))}
+                  </div>
+                )
+              }
+              const we = group.items[0]
+              return <ExerciseCard key={we.id} workoutExercise={we} sets={setsMap[we.id] ?? []} unit={unit} readOnly onAddSet={() => {}} onUpdateSet={() => {}} onDeleteSet={() => {}} onRemoveExercise={() => {}} />
+            })
+          })()}
         </div>
       </main>
 

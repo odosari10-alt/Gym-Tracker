@@ -57,14 +57,14 @@ export function removeExerciseFromWorkout(db: Database, workoutExerciseId: numbe
 export function getWorkoutExercises(db: Database, workoutId: number): WorkoutExercise[] {
   const rows = query(db, `
     SELECT we.id, we.workout_id, we.exercise_id, we.sort_order, we.notes,
-           e.name as exercise_name, mg.name as muscle_group_name
+           e.name as exercise_name, mg.name as muscle_group_name, we.superset_group
     FROM workout_exercises we
     JOIN exercises e ON e.id = we.exercise_id
     JOIN muscle_groups mg ON mg.id = e.muscle_group_id
     WHERE we.workout_id = ?
     ORDER BY we.sort_order
   `, [workoutId])
-  return rows.map(([id, workout_id, exercise_id, sort_order, notes, exercise_name, muscle_group_name]) => ({
+  return rows.map(([id, workout_id, exercise_id, sort_order, notes, exercise_name, muscle_group_name, superset_group]) => ({
     id: Number(id),
     workout_id: Number(workout_id),
     exercise_id: Number(exercise_id),
@@ -72,7 +72,19 @@ export function getWorkoutExercises(db: Database, workoutId: number): WorkoutExe
     notes: notes ? String(notes) : null,
     exercise_name: String(exercise_name),
     muscle_group_name: String(muscle_group_name),
+    superset_group: superset_group != null ? Number(superset_group) : null,
   }))
+}
+
+export function linkSuperset(db: Database, weId1: number, weId2: number): void {
+  const group = Date.now()
+  execute(db, 'UPDATE workout_exercises SET superset_group = ? WHERE id IN (?, ?)', [group, weId1, weId2])
+  scheduleSave()
+}
+
+export function unlinkSuperset(db: Database, supersetGroup: number): void {
+  execute(db, 'UPDATE workout_exercises SET superset_group = NULL WHERE superset_group = ?', [supersetGroup])
+  scheduleSave()
 }
 
 export function getWorkoutSummaries(db: Database, limit?: number): WorkoutSummary[] {
