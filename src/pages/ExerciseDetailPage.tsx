@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { ArrowLeft, Trophy } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
@@ -7,20 +7,27 @@ import { getExerciseProgress, getExercisePR } from '../db/queries/analytics'
 import { ProgressChart } from '../components/analytics/ProgressChart'
 import { OneRMChart } from '../components/analytics/OneRMChart'
 import { Card } from '../components/ui/Card'
+import { Spinner } from '../components/ui/Spinner'
 import { formatWeight } from '../lib/formulas'
+import type { Exercise, ExerciseProgress, PersonalRecord } from '../types'
 
 export function ExerciseDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { db, unit } = useDatabase()
+  const { unit } = useDatabase()
   const navigate = useNavigate()
+  const [exercise, setExercise] = useState<Exercise | null>(null)
+  const [progress, setProgress] = useState<ExerciseProgress[]>([])
+  const [pr, setPr] = useState<PersonalRecord | null>(null)
 
-  const exercise = useMemo(() => db && id ? getExerciseById(db, Number(id)) : null, [db, id])
-  const progress = useMemo(() => db && id ? getExerciseProgress(db, Number(id)) : [], [db, id])
-  const pr = useMemo(() => db && id ? getExercisePR(db, Number(id)) : null, [db, id])
+  useEffect(() => {
+    if (!id) return
+    const numId = Number(id)
+    getExerciseById(numId).then(setExercise)
+    getExerciseProgress(numId).then(setProgress)
+    getExercisePR(numId).then(setPr)
+  }, [id])
 
-  if (!exercise) {
-    return <div className="py-8 text-center text-text-muted">Exercise not found</div>
-  }
+  if (!exercise) return <Spinner />
 
   return (
     <div className="py-4 flex flex-col gap-4">

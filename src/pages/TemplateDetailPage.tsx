@@ -1,7 +1,6 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { ArrowLeft, Plus, Trash2, Play, GripVertical } from 'lucide-react'
-import { useDatabase } from '../db/hooks/useDatabase'
 import { getTemplateById, addTemplateDay, deleteTemplateDay, addExerciseToDay, removeExerciseFromDay, startWorkoutFromDay } from '../db/queries/templates'
 import { getExercises, getMuscleGroups } from '../db/queries/exercises'
 import { getActiveWorkout, deleteWorkout, getWorkoutExercises } from '../db/queries/workouts'
@@ -11,10 +10,11 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Input } from '../components/ui/Input'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { Spinner } from '../components/ui/Spinner'
+import type { Exercise, MuscleGroup, TemplateWithDays } from '../types'
 
 export function TemplateDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { db } = useDatabase()
   const navigate = useNavigate()
   const [refresh, setRefresh] = useState(0)
   const [pickerDayId, setPickerDayId] = useState<number | null>(null)
@@ -22,61 +22,66 @@ export function TemplateDetailPage() {
   const [dayName, setDayName] = useState('')
   const [deleteDayId, setDeleteDayId] = useState<number | null>(null)
   const [confirmStartDayId, setConfirmStartDayId] = useState<number | null>(null)
+  const [template, setTemplate] = useState<TemplateWithDays | null>(null)
+  const [allExercises, setAllExercises] = useState<Exercise[]>([])
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([])
 
-  const template = useMemo(() => db && id ? getTemplateById(db, Number(id)) : null, [db, id, refresh])
-  const allExercises = useMemo(() => db ? getExercises(db) : [], [db])
-  const muscleGroups = useMemo(() => db ? getMuscleGroups(db) : [], [db])
+  useEffect(() => {
+    getExercises().then(setAllExercises)
+    getMuscleGroups().then(setMuscleGroups)
+  }, [])
+
+  useEffect(() => {
+    if (!id) return
+    getTemplateById(Number(id)).then(setTemplate)
+  }, [id, refresh])
 
   const reload = () => setRefresh((r) => r + 1)
 
-  const handleAddDay = useCallback(() => {
-    if (!db || !id || !dayName.trim()) return
-    addTemplateDay(db, Number(id), dayName.trim())
+  const handleAddDay = useCallback(async () => {
+    if (!id || !dayName.trim()) return
+    await addTemplateDay(Number(id), dayName.trim())
     setDayName('')
     setShowAddDay(false)
     reload()
-  }, [db, id, dayName])
+  }, [id, dayName])
 
-  const handleDeleteDay = useCallback(() => {
-    if (!db || deleteDayId == null) return
-    deleteTemplateDay(db, deleteDayId)
+  const handleDeleteDay = useCallback(async () => {
+    if (deleteDayId == null) return
+    await deleteTemplateDay(deleteDayId)
     setDeleteDayId(null)
     reload()
-  }, [db, deleteDayId])
+  }, [deleteDayId])
 
-  const handleAddExercise = useCallback((ex: { id: number }) => {
-    if (!db || pickerDayId == null) return
-    addExerciseToDay(db, pickerDayId, ex.id)
+  const handleAddExercise = useCallback(async (ex: { id: number }) => {
+    if (pickerDayId == null) return
+    await addExerciseToDay(pickerDayId, ex.id)
     setPickerDayId(null)
     reload()
-  }, [db, pickerDayId])
+  }, [pickerDayId])
 
-  const handleRemoveExercise = useCallback((tdeId: number) => {
-    if (!db) return
-    removeExerciseFromDay(db, tdeId)
+  const handleRemoveExercise = useCallback(async (tdeId: number) => {
+    await removeExerciseFromDay(tdeId)
     reload()
-  }, [db])
+  }, [])
 
-  const handleStartWorkout = useCallback((dayId: number) => {
-    if (!db) return
-    const active = getActiveWorkout(db)
+  const handleStartWorkout = useCallback(async (dayId: number) => {
+    const active = await getActiveWorkout()
     if (active) {
-      const exs = getWorkoutExercises(db, active.id)
+      const exs = await getWorkoutExercises(active.id)
       if (exs.length === 0) {
-        deleteWorkout(db, active.id)
+        await deleteWorkout(active.id)
       } else {
         navigate('/workout')
         return
       }
     }
-    startWorkoutFromDay(db, dayId)
+    await startWorkoutFromDay(dayId)
     setConfirmStartDayId(null)
     navigate('/workout')
-  }, [db, navigate])
+  }, [navigate])
 
-  if (!template) {
-    return <div className="py-8 text-center text-text-muted">Template not found</div>
-  }
+  if (!template) return <Spinner />
 
   return (
     <div className="py-4 flex flex-col gap-4">

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
+import { AuthProvider } from './db/hooks/useAuth'
 import { DatabaseProvider } from './db/hooks/useDatabase'
 import App from './App'
 import './index.css'
@@ -8,9 +9,11 @@ import './index.css'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <DatabaseProvider>
-        <App />
-      </DatabaseProvider>
+      <AuthProvider>
+        <DatabaseProvider>
+          <App />
+        </DatabaseProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )

@@ -6,13 +6,14 @@ import { getWorkoutById, getWorkoutExercises, deleteWorkout } from '../db/querie
 import { getSetsForWorkoutExercise } from '../db/queries/sets'
 import { ExerciseCard } from '../components/workout/ExerciseCard'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { Spinner } from '../components/ui/Spinner'
 import { formatDate, durationMinutes } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
 import type { Workout, WorkoutExercise, Set } from '../types'
 
 export function WorkoutDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const { db, unit, save } = useDatabase()
+  const { unit } = useDatabase()
   const navigate = useNavigate()
   const [workout, setWorkout] = useState<Workout | null>(null)
   const [exercises, setExercises] = useState<WorkoutExercise[]>([])
@@ -20,34 +21,33 @@ export function WorkoutDetailPage() {
   const [showDelete, setShowDelete] = useState(false)
 
   useEffect(() => {
-    if (!db || !id) return
-    const w = getWorkoutById(db, Number(id))
-    setWorkout(w)
-    if (w) {
-      const exs = getWorkoutExercises(db, w.id)
-      setExercises(exs)
-      const map: Record<number, Set[]> = {}
-      for (const ex of exs) {
-        map[ex.id] = getSetsForWorkoutExercise(db, ex.id)
+    if (!id) return
+    ;(async () => {
+      const w = await getWorkoutById(Number(id))
+      setWorkout(w)
+      if (w) {
+        const exs = await getWorkoutExercises(w.id)
+        setExercises(exs)
+        const map: Record<number, Set[]> = {}
+        for (const ex of exs) {
+          map[ex.id] = await getSetsForWorkoutExercise(ex.id)
+        }
+        setSetsMap(map)
       }
-      setSetsMap(map)
-    }
-  }, [db, id])
+    })()
+  }, [id])
 
   const totalVolume = useMemo(() => {
     return Object.values(setsMap).flat().filter(s => !s.is_warmup).reduce((sum, s) => sum + s.weight_kg * s.reps, 0)
   }, [setsMap])
 
   const handleDelete = useCallback(async () => {
-    if (!db || !workout) return
-    deleteWorkout(db, workout.id)
-    await save()
+    if (!workout) return
+    await deleteWorkout(workout.id)
     navigate('/history')
-  }, [db, workout, save, navigate])
+  }, [workout, navigate])
 
-  if (!workout) {
-    return <div className="py-8 text-center text-text-muted">Workout not found</div>
-  }
+  if (!workout) return <Spinner />
 
   const duration = workout.finished_at ? durationMinutes(workout.started_at, workout.finished_at) : null
 

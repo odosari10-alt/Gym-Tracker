@@ -1,18 +1,30 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useDatabase } from '../db/hooks/useDatabase'
 import { getWeeklySummaries, getPersonalRecords } from '../db/queries/analytics'
 import { VolumeChart } from '../components/analytics/VolumeChart'
 import { PRBadge } from '../components/analytics/PRBadge'
 import { WeeklySummaryCard } from '../components/analytics/WeeklySummaryCard'
 import { Card } from '../components/ui/Card'
+import { Spinner } from '../components/ui/Spinner'
 import { BarChart3 } from 'lucide-react'
+import type { WeeklySummary, PersonalRecord } from '../types'
 
 export function AnalyticsPage() {
-  const { db, unit } = useDatabase()
+  const { unit } = useDatabase()
+  const [weeklySummaries, setWeeklySummaries] = useState<WeeklySummary[]>([])
+  const [prs, setPrs] = useState<PersonalRecord[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const weeklySummaries = useMemo(() => db ? getWeeklySummaries(db, 12) : [], [db])
-  const prs = useMemo(() => db ? getPersonalRecords(db, 10) : [], [db])
+  useEffect(() => {
+    Promise.all([
+      getWeeklySummaries(12).then(setWeeklySummaries),
+      getPersonalRecords(10).then(setPrs),
+    ]).finally(() => setLoading(false))
+  }, [])
+
   const currentWeek = weeklySummaries.length > 0 ? weeklySummaries[weeklySummaries.length - 1] : null
+
+  if (loading) return <Spinner />
 
   if (!weeklySummaries.length && !prs.length) {
     return (

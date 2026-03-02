@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router'
-import { useDatabase } from './db/hooks/useDatabase'
+import { useAuth } from './db/hooks/useAuth'
+import { LoginPage } from './pages/LoginPage'
 import { AppShell } from './components/layout/AppShell'
 import { HomePage } from './pages/HomePage'
 import { WorkoutPage } from './pages/WorkoutPage'
@@ -13,28 +14,21 @@ import { TemplatesPage } from './pages/TemplatesPage'
 import { TemplateDetailPage } from './pages/TemplateDetailPage'
 
 export default function App() {
-  const { loading, error } = useDatabase()
+  const auth = useAuth()
 
-  if (loading) {
+  if (auth.loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto mb-4" />
-          <p className="text-text-secondary">Loading database...</p>
+          <p className="text-text-secondary">Loading...</p>
         </div>
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-center p-6">
-          <p className="text-danger text-lg mb-2">Failed to load database</p>
-          <p className="text-text-secondary">{error}</p>
-        </div>
-      </div>
-    )
+  if (!auth.user) {
+    return <LoginPage />
   }
 
   return (

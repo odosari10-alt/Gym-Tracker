@@ -12,10 +12,11 @@ import { WorkoutTimer } from '../components/workout/WorkoutTimer'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import type { Set, WorkoutExercise, TemplateWithDays } from '../types'
+import { Spinner } from '../components/ui/Spinner'
+import type { Set, WorkoutExercise, Exercise, MuscleGroup, TemplateWithDays } from '../types'
 
 export function WorkoutPage() {
-  const { db, unit, save } = useDatabase()
+  const { unit } = useDatabase()
   const navigate = useNavigate()
   const [workoutId, setWorkoutId] = useState<number | null>(null)
   const [startedAt, setStartedAt] = useState<string>('')
@@ -28,111 +29,114 @@ export function WorkoutPage() {
   const [showDiscard, setShowDiscard] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const [supersetPickerFor, setSupersetPickerFor] = useState<number | null>(null)
-
-  const allExercises = useMemo(() => db ? getExercises(db) : [], [db])
-  const muscleGroups = useMemo(() => db ? getMuscleGroups(db) : [], [db])
-  const templates = useMemo(() => {
-    if (!db || !showTemplatePicker) return []
-    return getTemplatesWithDays(db)
-  }, [db, showTemplatePicker])
+  const [allExercises, setAllExercises] = useState<Exercise[]>([])
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([])
+  const [templates, setTemplates] = useState<TemplateWithDays[]>([])
 
   useEffect(() => {
-    if (!db) return
-    const active = getActiveWorkout(db)
-    if (active) {
-      setWorkoutId(active.id)
-      setStartedAt(active.started_at)
-    } else {
-      const id = startWorkout(db)
-      setWorkoutId(id)
-      setStartedAt(new Date().toISOString())
-    }
-  }, [db])
+    getExercises().then(setAllExercises)
+    getMuscleGroups().then(setMuscleGroups)
+  }, [])
 
   useEffect(() => {
-    if (!db || !workoutId) return
-    const exs = getWorkoutExercises(db, workoutId)
-    setExercises(exs)
-    const map: Record<number, Set[]> = {}
-    for (const ex of exs) {
-      map[ex.id] = getSetsForWorkoutExercise(db, ex.id)
+    if (showTemplatePicker) {
+      getTemplatesWithDays().then(setTemplates)
     }
-    setSetsMap(map)
-  }, [db, workoutId, refresh])
+  }, [showTemplatePicker])
+
+  useEffect(() => {
+    ;(async () => {
+      const active = await getActiveWorkout()
+      if (active) {
+        setWorkoutId(active.id)
+        setStartedAt(active.started_at)
+      } else {
+        const id = await startWorkout()
+        setWorkoutId(id)
+        setStartedAt(new Date().toISOString())
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    if (!workoutId) return
+    ;(async () => {
+      const exs = await getWorkoutExercises(workoutId)
+      setExercises(exs)
+      const map: Record<number, Set[]> = {}
+      for (const ex of exs) {
+        map[ex.id] = await getSetsForWorkoutExercise(ex.id)
+      }
+      setSetsMap(map)
+    })()
+  }, [workoutId, refresh])
 
   const reload = () => setRefresh((r) => r + 1)
 
-  const handleAddExercise = useCallback((ex: { id: number }) => {
-    if (!db || !workoutId) return
-    addExerciseToWorkout(db, workoutId, ex.id)
+  const handleAddExercise = useCallback(async (ex: { id: number }) => {
+    if (!workoutId) return
+    await addExerciseToWorkout(workoutId, ex.id)
     reload()
-  }, [db, workoutId])
+  }, [workoutId])
 
-  const handleRemoveExercise = useCallback((weId: number) => {
-    if (!db) return
-    removeExerciseFromWorkout(db, weId)
+  const handleRemoveExercise = useCallback(async (weId: number) => {
+    await removeExerciseFromWorkout(weId)
     reload()
-  }, [db])
+  }, [])
 
-  const handleAddSet = useCallback((weId: number) => {
-    if (!db) return
-    const prevSets = getSetsForWorkoutExercise(db, weId)
+  const handleAddSet = useCallback(async (weId: number) => {
+    const prevSets = await getSetsForWorkoutExercise(weId)
     const lastSet = prevSets[prevSets.length - 1]
-    addSet(db, weId, lastSet?.weight_kg ?? 0, lastSet?.reps ?? 0)
+    await addSet(weId, lastSet?.weight_kg ?? 0, lastSet?.reps ?? 0)
     reload()
-  }, [db])
+  }, [])
 
-  const handleUpdateSet = useCallback((setId: number, weightKg: number, reps: number, isWarmup: boolean, rpe: number | null) => {
-    if (!db) return
-    updateSet(db, setId, weightKg, reps, isWarmup, rpe)
+  const handleUpdateSet = useCallback(async (setId: number, weightKg: number, reps: number, isWarmup: boolean, rpe: number | null) => {
+    await updateSet(setId, weightKg, reps, isWarmup, rpe)
     reload()
-  }, [db])
+  }, [])
 
-  const handleDeleteSet = useCallback((setId: number) => {
-    if (!db) return
-    deleteSet(db, setId)
+  const handleDeleteSet = useCallback(async (setId: number) => {
+    await deleteSet(setId)
     reload()
-  }, [db])
+  }, [])
 
-  const handleAddTemplateDay = useCallback((dayId: number) => {
-    if (!db || !workoutId) return
-    addTemplateDayToWorkout(db, workoutId, dayId)
+  const handleAddTemplateDay = useCallback(async (dayId: number) => {
+    if (!workoutId) return
+    await addTemplateDayToWorkout(workoutId, dayId)
     setShowTemplatePicker(false)
     setExpandedTemplate(null)
     reload()
-  }, [db, workoutId])
+  }, [workoutId])
 
   const handleFinish = useCallback(async () => {
-    if (!db || !workoutId) return
-    finishWorkout(db, workoutId)
-    await save()
+    if (!workoutId) return
+    await finishWorkout(workoutId)
     navigate('/')
-  }, [db, workoutId, save, navigate])
+  }, [workoutId, navigate])
 
   const handleDiscard = useCallback(async () => {
-    if (!db || !workoutId) return
-    deleteWorkout(db, workoutId)
-    await save()
+    if (!workoutId) return
+    await deleteWorkout(workoutId)
     navigate('/')
-  }, [db, workoutId, save, navigate])
+  }, [workoutId, navigate])
 
-  const handleSupersetSelect = useCallback((weId: number) => {
-    if (!db || supersetPickerFor == null) return
-    linkSuperset(db, supersetPickerFor, weId)
+  const handleSupersetSelect = useCallback(async (weId: number) => {
+    if (supersetPickerFor == null) return
+    await linkSuperset(supersetPickerFor, weId)
     setSupersetPickerFor(null)
     reload()
-  }, [db, supersetPickerFor])
+  }, [supersetPickerFor])
 
   const supersetCandidates = useMemo(() => {
     if (supersetPickerFor == null) return []
     return exercises.filter((e) => e.id !== supersetPickerFor && e.superset_group == null)
   }, [exercises, supersetPickerFor])
 
-  const handleUnlinkSuperset = useCallback((supersetGroup: number) => {
-    if (!db) return
-    unlinkSuperset(db, supersetGroup)
+  const handleUnlinkSuperset = useCallback(async (supersetGroup: number) => {
+    await unlinkSuperset(supersetGroup)
     reload()
-  }, [db])
+  }, [])
 
   const SUPERSET_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
 
@@ -168,6 +172,8 @@ export function WorkoutPage() {
 
   const presets = templates.filter((t) => t.is_preset)
   const custom = templates.filter((t) => !t.is_preset)
+
+  if (!workoutId) return <Spinner />
 
   return (
     <div className="flex flex-col h-full bg-background">

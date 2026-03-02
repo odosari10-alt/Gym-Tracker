@@ -1,26 +1,37 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { Plus, Calendar, ChevronDown, Dumbbell } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
 import { getWorkoutSummaries, getActiveWorkout } from '../db/queries/workouts'
 import { getWeeklySummaries } from '../db/queries/analytics'
 import { Card } from '../components/ui/Card'
+import { Spinner } from '../components/ui/Spinner'
 import { formatDate } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
+import type { WorkoutSummary, WeeklySummary, Workout } from '../types'
 
 export function HomePage() {
-  const { db, unit } = useDatabase()
+  const { unit } = useDatabase()
   const navigate = useNavigate()
+  const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null)
+  const [allRecent, setAllRecent] = useState<WorkoutSummary[]>([])
+  const [weeklySummary, setWeeklySummary] = useState<WeeklySummary | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const activeWorkout = useMemo(() => db ? getActiveWorkout(db) : null, [db])
-  const allRecent = useMemo(() => db ? getWorkoutSummaries(db, 3) : [], [db])
+  useEffect(() => {
+    Promise.all([
+      getActiveWorkout().then(setActiveWorkout),
+      getWorkoutSummaries(3).then(setAllRecent),
+      getWeeklySummaries(1).then((weeks) => {
+        setWeeklySummary(weeks.length > 0 ? weeks[weeks.length - 1] : null)
+      }),
+    ]).finally(() => setLoading(false))
+  }, [])
+
   const recentWorkouts = allRecent.slice(0, 2)
   const hasMore = allRecent.length > 2
-  const weeklySummary = useMemo(() => {
-    if (!db) return null
-    const weeks = getWeeklySummaries(db, 1)
-    return weeks.length > 0 ? weeks[weeks.length - 1] : null
-  }, [db])
+
+  if (loading) return <Spinner />
 
   return (
     <div className="py-4 flex flex-col gap-5">

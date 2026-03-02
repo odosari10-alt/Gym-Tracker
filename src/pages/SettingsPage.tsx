@@ -1,36 +1,27 @@
-import { useCallback, useRef } from 'react'
-import { Download, Upload } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
-import { exportDatabase, importDatabase } from '../db/database'
+import { useAuth } from '../db/hooks/useAuth'
 import { Card } from '../components/ui/Card'
 import type { WeightUnit } from '../types'
+import { LogOut } from 'lucide-react'
 
 export function SettingsPage() {
   const { unit, setUnit } = useDatabase()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleExport = useCallback(async () => {
-    const data = await exportDatabase()
-    const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `gym-tracker-${new Date().toISOString().slice(0, 10)}.db`
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [])
-
-  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const data = await file.arrayBuffer()
-    await importDatabase(data)
-    window.location.reload()
-  }, [])
+  const { user, signOut } = useAuth()
 
   return (
     <div className="py-4 flex flex-col gap-5">
       <h2 className="text-xl font-extrabold tracking-tight">Settings</h2>
+
+      <Card>
+        <h3 className="font-bold text-text-primary mb-3">Account</h3>
+        <p className="text-sm text-text-secondary mb-4">{user?.email ?? 'Unknown'}</p>
+        <button
+          onClick={signOut}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#121212] border border-border rounded-xl text-sm font-semibold text-danger hover:border-danger transition-colors"
+        >
+          <LogOut className="h-4 w-4" /> Sign Out
+        </button>
+      </Card>
 
       <Card>
         <h3 className="font-bold text-text-primary mb-3">Weight Unit</h3>
@@ -48,35 +39,6 @@ export function SettingsPage() {
               {u === 'kg' ? 'Kilograms (kg)' : 'Pounds (lb)'}
             </button>
           ))}
-        </div>
-      </Card>
-
-      <Card>
-        <h3 className="font-bold text-text-primary mb-3">Data</h3>
-        <div className="flex flex-col gap-3">
-          <button
-            onClick={handleExport}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#121212] border border-border rounded-xl text-sm font-semibold text-text-primary hover:border-text-muted transition-colors"
-          >
-            <Download className="h-4 w-4" /> Export Database
-          </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#121212] border border-border rounded-xl text-sm font-semibold text-text-primary hover:border-text-muted transition-colors"
-          >
-            <Upload className="h-4 w-4" /> Import Database
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".db"
-            onChange={handleImport}
-            className="hidden"
-          />
-          <p className="text-xs text-text-muted">
-            Export your database as a backup or import a previously exported database.
-            Importing will replace all current data.
-          </p>
         </div>
       </Card>
     </div>

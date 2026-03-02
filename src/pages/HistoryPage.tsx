@@ -1,28 +1,35 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { ArrowLeft, Calendar, Clock, Dumbbell, Weight, Trash2 } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
 import { getWorkoutSummaries, deleteWorkout } from '../db/queries/workouts'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { Spinner } from '../components/ui/Spinner'
 import { formatDate, formatTime } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
+import type { WorkoutSummary } from '../types'
 
 export function HistoryPage() {
-  const { db, unit, save } = useDatabase()
+  const { unit } = useDatabase()
   const navigate = useNavigate()
   const [refresh, setRefresh] = useState(0)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [workouts, setWorkouts] = useState<WorkoutSummary[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const workouts = useMemo(() => db ? getWorkoutSummaries(db) : [], [db, refresh])
+  useEffect(() => {
+    getWorkoutSummaries().then(setWorkouts).finally(() => setLoading(false))
+  }, [refresh])
+
+  if (loading) return <Spinner />
 
   const handleDelete = useCallback(async () => {
-    if (!db || deleteId == null) return
-    deleteWorkout(db, deleteId)
-    await save()
+    if (deleteId == null) return
+    await deleteWorkout(deleteId)
     setDeleteId(null)
     setRefresh((r) => r + 1)
-  }, [db, deleteId, save])
+  }, [deleteId])
 
   if (!workouts.length) {
     return (

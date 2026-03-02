@@ -9,7 +9,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['sql-wasm.wasm'],
+      includeAssets: [],
       manifest: {
         name: 'Gym Weight Tracker',
         short_name: 'GymTracker',
@@ -32,10 +32,5 @@ export default defineConfig({
       },
     }),
   ],
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
-  },
+  server: {},
 })

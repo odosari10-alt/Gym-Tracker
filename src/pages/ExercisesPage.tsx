@@ -1,46 +1,51 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { Plus, Search } from 'lucide-react'
-import { useDatabase } from '../db/hooks/useDatabase'
 import { getExercises, getMuscleGroups, createExercise, deleteExercise } from '../db/queries/exercises'
 import { MuscleGroupFilter } from '../components/exercises/MuscleGroupFilter'
 import { ExerciseList } from '../components/exercises/ExerciseList'
 import { ExerciseForm } from '../components/exercises/ExerciseForm'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Button } from '../components/ui/Button'
-import type { Exercise } from '../types'
+import { Spinner } from '../components/ui/Spinner'
+import type { Exercise, MuscleGroup } from '../types'
 
 export function ExercisesPage() {
-  const { db } = useDatabase()
   const [selectedGroup, setSelectedGroup] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null)
   const [refresh, setRefresh] = useState(0)
   const navigate = useNavigate()
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([])
+  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const muscleGroups = useMemo(() => db ? getMuscleGroups(db) : [], [db])
-  const exercises = useMemo(
-    () => db ? getExercises(db, selectedGroup ?? undefined, search || undefined) : [],
-    [db, selectedGroup, search, refresh]
-  )
+  useEffect(() => {
+    getMuscleGroups().then(setMuscleGroups).finally(() => setLoading(false))
+  }, [])
 
-  const handleAddExercise = useCallback((name: string, muscleGroupId: number) => {
-    if (!db) return
-    createExercise(db, name, muscleGroupId)
+  useEffect(() => {
+    getExercises(selectedGroup ?? undefined, search || undefined).then(setExercises)
+  }, [selectedGroup, search, refresh])
+
+  const handleAddExercise = useCallback(async (name: string, muscleGroupId: number) => {
+    await createExercise(name, muscleGroupId)
     setRefresh((r) => r + 1)
-  }, [db])
+  }, [])
 
   const handleSelect = useCallback((ex: Exercise) => {
     navigate(`/exercises/${ex.id}`)
   }, [navigate])
 
-  const handleDelete = useCallback(() => {
-    if (!db || !deleteTarget) return
-    deleteExercise(db, deleteTarget.id)
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return
+    await deleteExercise(deleteTarget.id)
     setDeleteTarget(null)
     setRefresh((r) => r + 1)
-  }, [db, deleteTarget])
+  }, [deleteTarget])
+
+  if (loading) return <Spinner />
 
   return (
     <div className="py-4 flex flex-col gap-4">

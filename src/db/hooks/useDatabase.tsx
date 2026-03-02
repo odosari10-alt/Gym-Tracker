@@ -1,14 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import type { Database } from 'sql.js'
-import { initDatabase, saveToIndexedDB } from '../database'
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import type { WeightUnit } from '../../types'
 import { SETTINGS_KEY } from '../../lib/constants'
 
 interface DatabaseContextValue {
-  db: Database | null
-  loading: boolean
-  error: string | null
-  save: () => Promise<void>
   unit: WeightUnit
   setUnit: (u: WeightUnit) => void
 }
@@ -27,27 +21,7 @@ function loadUnit(): WeightUnit {
 }
 
 export function DatabaseProvider({ children }: { children: ReactNode }) {
-  const [db, setDb] = useState<Database | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [unit, setUnitState] = useState<WeightUnit>(loadUnit)
-
-  useEffect(() => {
-    initDatabase()
-      .then(setDb)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
-    if (navigator.storage?.persist) {
-      navigator.storage.persist()
-    }
-  }, [])
-
-  const save = useCallback(async () => {
-    await saveToIndexedDB()
-  }, [])
 
   const setUnit = useCallback((u: WeightUnit) => {
     setUnitState(u)
@@ -55,7 +29,7 @@ export function DatabaseProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <DatabaseContext.Provider value={{ db, loading, error, save, unit, setUnit }}>
+    <DatabaseContext.Provider value={{ unit, setUnit }}>
       {children}
     </DatabaseContext.Provider>
   )
