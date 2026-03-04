@@ -345,6 +345,7 @@ export function WorkoutPage() {
         message="Are you sure you want to discard workout?"
         confirmLabel="Yes"
       />
+
     </div>
   )
 }

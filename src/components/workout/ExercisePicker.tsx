@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Dumbbell } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { MuscleGroupFilter } from '../exercises/MuscleGroupFilter'
+import { getExerciseGif } from '../../lib/exerciseGifs'
 import type { Exercise, MuscleGroup } from '../../types'
 
 interface ExercisePickerProps {
@@ -47,16 +48,30 @@ export function ExercisePicker({ open, onClose, onSelect, exercises, muscleGroup
         </div>
         <MuscleGroupFilter groups={muscleGroups} selected={groupId} onSelect={setGroupId} />
         <div className="flex flex-col max-h-[50vh] overflow-y-auto overscroll-contain">
-          {filtered.map((ex) => (
-            <button
-              key={ex.id}
-              onClick={() => handleSelect(ex)}
-              className="text-left px-3 py-3 rounded-xl hover:bg-surface-hover active:bg-surface transition-colors"
-            >
-              <p className="text-text-primary text-sm font-semibold">{ex.name}</p>
-              <p className="text-text-muted text-xs">{ex.muscle_group_name}</p>
-            </button>
-          ))}
+          {filtered.map((ex) => {
+            const gifUrl = getExerciseGif(ex.name)
+            return (
+              <button
+                key={ex.id}
+                onClick={() => handleSelect(ex)}
+                className="flex items-center gap-3 text-left px-3 py-2.5 rounded-xl hover:bg-surface-hover active:bg-surface transition-colors"
+              >
+                <div className="w-22 h-22 rounded-xl bg-[#111] overflow-hidden shrink-0">
+                  {gifUrl ? (
+                    <img src={gifUrl} alt={ex.name} loading="lazy" className="w-full h-full object-contain" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Dumbbell className="h-5 w-5 text-text-muted/30" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-text-primary text-sm font-semibold truncate">{ex.name}</p>
+                  <p className="text-text-muted text-xs">{ex.muscle_group_name}</p>
+                </div>
+              </button>
+            )
+          })}
           {!filtered.length && <p className="text-text-muted text-center py-4 text-sm">No exercises found</p>}
         </div>
       </div>

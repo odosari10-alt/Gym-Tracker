@@ -4,8 +4,16 @@ import { Card } from '../components/ui/Card'
 import type { WeightUnit } from '../types'
 import { LogOut } from 'lucide-react'
 
+const REST_PRESETS = [
+  { label: '30s', value: 30 },
+  { label: '1:00', value: 60 },
+  { label: '1:30', value: 90 },
+  { label: '2:00', value: 120 },
+  { label: '3:00', value: 180 },
+]
+
 export function SettingsPage() {
-  const { unit, setUnit } = useDatabase()
+  const { unit, setUnit, restTimerSeconds, setRestTimerSeconds } = useDatabase()
   const { user, signOut } = useAuth()
 
   return (
@@ -37,6 +45,26 @@ export function SettingsPage() {
               }`}
             >
               {u === 'kg' ? 'Kilograms (kg)' : 'Pounds (lb)'}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="font-bold text-text-primary mb-1">Rest Timer</h3>
+        <p className="text-xs text-text-muted mb-3">Auto-starts after logging a set</p>
+        <div className="flex flex-wrap gap-2">
+          {REST_PRESETS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setRestTimerSeconds(opt.value)}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                restTimerSeconds === opt.value
+                  ? 'bg-primary text-white'
+                  : 'bg-[#121212] text-text-secondary border border-border hover:border-text-muted'
+              }`}
+            >
+              {opt.label}
             </button>
           ))}
         </div>

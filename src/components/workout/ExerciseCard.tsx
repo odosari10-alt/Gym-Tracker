@@ -1,7 +1,19 @@
-import { Trash2, Unlink } from 'lucide-react'
+import { Trash2, Unlink, Dumbbell, Timer, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { SetRow } from './SetRow'
+import { getExerciseGif } from '../../lib/exerciseGifs'
+import { useDatabase } from '../../db/hooks/useDatabase'
 import type { WorkoutExercise, Set, WeightUnit } from '../../types'
+
+const REST_STEP = 30
+
+function formatRestTime(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  if (m === 0) return `${s}s`
+  if (s === 0) return `${m}:00`
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
 
 interface ExerciseCardProps {
   workoutExercise: WorkoutExercise
@@ -23,6 +35,8 @@ export function ExerciseCard({
   onSuperset, onUnlinkSuperset
 }: ExerciseCardProps) {
   const isSuperset = workoutExercise.superset_group != null
+  const gifUrl = getExerciseGif(workoutExercise.exercise_name ?? '')
+  const { restTimerSeconds, setRestTimerSeconds } = useDatabase()
 
   return (
     <Card>
@@ -34,6 +48,15 @@ export function ExerciseCard({
               style={{ backgroundColor: supersetColor }}
             />
           )}
+          <div className="w-20 h-20 rounded-xl bg-[#111] overflow-hidden shrink-0">
+            {gifUrl ? (
+              <img src={gifUrl} alt={workoutExercise.exercise_name ?? ''} loading="lazy" className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Dumbbell className="h-5 w-5 text-text-muted/30" />
+              </div>
+            )}
+          </div>
           <div className="min-w-0">
             <h3 className="font-bold text-text-primary truncate">{workoutExercise.exercise_name}</h3>
             <p className="text-xs text-text-muted">{workoutExercise.muscle_group_name}</p>
@@ -78,15 +101,42 @@ export function ExerciseCard({
       )}
 
       <div className="flex flex-col">
-        {sets.map((s) => (
-          <SetRow
-            key={s.id}
-            set={s}
-            unit={unit}
-            readOnly={readOnly}
-            onUpdate={onUpdateSet}
-            onDelete={onDeleteSet}
-          />
+        {sets.map((s, i) => (
+          <div key={s.id}>
+            {i > 0 && (
+              <div className="flex items-center py-2">
+                <div className="flex items-center w-full bg-blue-600/40 border border-blue-400/60 rounded-xl">
+                  {!readOnly && (
+                    <button
+                      onClick={() => setRestTimerSeconds(Math.max(REST_STEP, restTimerSeconds - REST_STEP))}
+                      className="px-3 py-2 text-blue-400 hover:text-blue-300 active:text-blue-200"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                  )}
+                  <span className="flex items-center justify-center gap-1.5 flex-1 text-sm font-semibold text-blue-400 py-2">
+                    <Timer className="h-4 w-4" />
+                    {formatRestTime(restTimerSeconds)} rest
+                  </span>
+                  {!readOnly && (
+                    <button
+                      onClick={() => setRestTimerSeconds(restTimerSeconds + REST_STEP)}
+                      className="px-3 py-2 text-blue-400 hover:text-blue-300 active:text-blue-200"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            <SetRow
+              set={s}
+              unit={unit}
+              readOnly={readOnly}
+              onUpdate={onUpdateSet}
+              onDelete={onDeleteSet}
+            />
+          </div>
         ))}
       </div>
 
