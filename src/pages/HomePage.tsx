@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
-import { Plus, Calendar, ChevronDown, Dumbbell, Trash2 } from 'lucide-react'
+import { Plus, Calendar, ChevronDown, Dumbbell } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
 import { getWorkoutSummaries, getActiveWorkout, deleteWorkout } from '../db/queries/workouts'
 import { getWeeklySummaries } from '../db/queries/analytics'
@@ -77,9 +77,9 @@ export function HomePage() {
           </div>
           <button
             onClick={() => setShowDiscard(true)}
-            className="flex items-center justify-center px-5 bg-danger text-white active:bg-danger/80 transition-colors"
+            className="flex items-center justify-center px-5 bg-danger text-white font-bold text-sm active:bg-danger/80 transition-colors"
           >
-            <Trash2 className="h-5 w-5" />
+            Discard
           </button>
         </div>
       )}
