@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
-import { Plus, Calendar, ChevronDown, Dumbbell } from 'lucide-react'
+import { Plus, Calendar, ChevronDown, Dumbbell, Trash2 } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
-import { getWorkoutSummaries, getActiveWorkout } from '../db/queries/workouts'
+import { getWorkoutSummaries, getActiveWorkout, deleteWorkout } from '../db/queries/workouts'
 import { getWeeklySummaries } from '../db/queries/analytics'
 import { Card } from '../components/ui/Card'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Spinner } from '../components/ui/Spinner'
 import { formatDate } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
@@ -17,6 +18,14 @@ export function HomePage() {
   const [allRecent, setAllRecent] = useState<WorkoutSummary[]>([])
   const [weeklySummary, setWeeklySummary] = useState<WeeklySummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showDiscard, setShowDiscard] = useState(false)
+
+  const handleDiscard = useCallback(async () => {
+    if (!activeWorkout) return
+    await deleteWorkout(activeWorkout.id)
+    setActiveWorkout(null)
+    setShowDiscard(false)
+  }, [activeWorkout])
 
   useEffect(() => {
     Promise.all([
@@ -58,15 +67,21 @@ export function HomePage() {
       )}
 
       {activeWorkout && (
-        <Card
-          className="cursor-pointer border border-primary/30"
-          onClick={() => navigate('/workout')}
-        >
-          <div className="flex items-center gap-2 text-primary font-bold">
-            <Dumbbell className="h-5 w-5" />
-            Workout in progress — tap to resume
+        <div className="flex items-stretch gap-0 rounded-2xl overflow-hidden border border-primary/30">
+          <div
+            className="flex-1 flex items-center gap-2 text-primary font-bold px-4 py-3.5 bg-surface cursor-pointer active:bg-surface-hover transition-colors"
+            onClick={() => navigate('/workout')}
+          >
+            <Dumbbell className="h-5 w-5 shrink-0" />
+            <span>Workout in progress — tap to resume</span>
           </div>
-        </Card>
+          <button
+            onClick={() => setShowDiscard(true)}
+            className="flex items-center justify-center px-5 bg-danger text-white active:bg-danger/80 transition-colors"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
       )}
 
       <button
@@ -117,6 +132,14 @@ export function HomePage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={showDiscard}
+        onClose={() => setShowDiscard(false)}
+        onConfirm={handleDiscard}
+        title="Discard Workout"
+        message="Are you sure you want to discard this workout? This cannot be undone."
+        confirmLabel="Discard"
+      />
     </div>
   )
 }
