@@ -111,8 +111,13 @@ export function WorkoutPage() {
 
   const handleFinish = useCallback(async () => {
     if (!workoutId) return
-    await finishWorkout(workoutId)
-    navigate('/')
+    try {
+      await finishWorkout(workoutId)
+      navigate('/')
+    } catch (err) {
+      console.error('Failed to finish workout:', err)
+      alert('Failed to finish workout. Please try again.')
+    }
   }, [workoutId, navigate])
 
   const handleDiscard = useCallback(async () => {

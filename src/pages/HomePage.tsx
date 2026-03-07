@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useLocation } from 'react-router'
 import { Plus, Calendar, ChevronDown, Dumbbell } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
 import { getWorkoutSummaries, getActiveWorkout, deleteWorkout } from '../db/queries/workouts'
@@ -7,13 +7,14 @@ import { getWeeklySummaries } from '../db/queries/analytics'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Spinner } from '../components/ui/Spinner'
-import { formatDate } from '../lib/dates'
+import { formatDate, formatDuration } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
 import type { WorkoutSummary, WeeklySummary, Workout } from '../types'
 
 export function HomePage() {
   const { unit } = useDatabase()
   const navigate = useNavigate()
+  const location = useLocation()
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null)
   const [allRecent, setAllRecent] = useState<WorkoutSummary[]>([])
   const [weeklySummary, setWeeklySummary] = useState<WeeklySummary | null>(null)
@@ -28,6 +29,7 @@ export function HomePage() {
   }, [activeWorkout])
 
   useEffect(() => {
+    setLoading(true)
     Promise.all([
       getActiveWorkout().then(setActiveWorkout),
       getWorkoutSummaries(3).then(setAllRecent),
@@ -35,7 +37,7 @@ export function HomePage() {
         setWeeklySummary(weeks.length > 0 ? weeks[weeks.length - 1] : null)
       }),
     ]).finally(() => setLoading(false))
-  }, [])
+  }, [location.key])
 
   const recentWorkouts = allRecent.slice(0, 2)
   const hasMore = allRecent.length > 2
@@ -115,7 +117,7 @@ export function HomePage() {
                   <div className="flex gap-3 text-xs text-text-muted font-medium">
                     <span>{w.exercise_count} ex</span>
                     <span>{w.total_sets} sets</span>
-                    {w.duration_minutes != null && <span>{w.duration_minutes}m</span>}
+                    {w.duration_minutes != null && <span>{formatDuration(w.duration_minutes)}</span>}
                   </div>
                 </div>
               </Card>

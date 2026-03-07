@@ -1,13 +1,14 @@
 import { useMemo, useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router'
-import { ArrowLeft, Calendar, Clock, Weight, Trash2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, Weight, Trash2, RotateCcw } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
-import { getWorkoutById, getWorkoutExercises, deleteWorkout } from '../db/queries/workouts'
+import { getWorkoutById, getWorkoutExercises, deleteWorkout, repeatWorkout, getActiveWorkout } from '../db/queries/workouts'
 import { getSetsForWorkoutExercise } from '../db/queries/sets'
 import { ExerciseCard } from '../components/workout/ExerciseCard'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { Button } from '../components/ui/Button'
 import { Spinner } from '../components/ui/Spinner'
-import { formatDate, durationMinutes } from '../lib/dates'
+import { formatDate, durationMinutes, formatDuration } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
 import type { Workout, WorkoutExercise, Set } from '../types'
 
@@ -44,7 +45,18 @@ export function WorkoutDetailPage() {
   const handleDelete = useCallback(async () => {
     if (!workout) return
     await deleteWorkout(workout.id)
-    navigate('/history')
+    navigate('/')
+  }, [workout, navigate])
+
+  const handleRepeat = useCallback(async () => {
+    if (!workout) return
+    const active = await getActiveWorkout()
+    if (active) {
+      alert('You already have an active workout. Finish or discard it first.')
+      return
+    }
+    await repeatWorkout(workout.id)
+    navigate('/workout')
   }, [workout, navigate])
 
   if (!workout) return <Spinner />
@@ -75,7 +87,7 @@ export function WorkoutDetailPage() {
             {duration != null && (
               <span className="flex items-center gap-1.5 px-3 py-1.5 bg-surface rounded-full text-xs font-medium">
                 <Clock className="h-3.5 w-3.5 text-primary" />
-                {duration} min
+                {formatDuration(duration)}
               </span>
             )}
             <span className="flex items-center gap-1.5 px-3 py-1.5 bg-surface rounded-full text-xs font-medium">
@@ -83,6 +95,10 @@ export function WorkoutDetailPage() {
               {formatWeight(totalVolume, unit)}
             </span>
           </div>
+
+          <Button onClick={handleRepeat} className="w-full">
+            <RotateCcw className="h-4 w-4" /> Repeat Workout
+          </Button>
 
           {workout.notes && (
             <p className="text-text-secondary text-sm italic">{workout.notes}</p>

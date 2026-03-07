@@ -6,7 +6,7 @@ import { getWorkoutSummaries, deleteWorkout } from '../db/queries/workouts'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Spinner } from '../components/ui/Spinner'
-import { formatDate, formatTime } from '../lib/dates'
+import { formatDate, formatTime, formatDuration } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
 import type { WorkoutSummary } from '../types'
 
@@ -18,18 +18,22 @@ export function HistoryPage() {
   const [workouts, setWorkouts] = useState<WorkoutSummary[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    getWorkoutSummaries().then(setWorkouts).finally(() => setLoading(false))
-  }, [refresh])
-
-  if (loading) return <Spinner />
-
   const handleDelete = useCallback(async () => {
     if (deleteId == null) return
     await deleteWorkout(deleteId)
     setDeleteId(null)
     setRefresh((r) => r + 1)
   }, [deleteId])
+
+  useEffect(() => {
+    setLoading(true)
+    getWorkoutSummaries()
+      .then(setWorkouts)
+      .catch((err) => console.error('Failed to load history:', err))
+      .finally(() => setLoading(false))
+  }, [refresh])
+
+  if (loading) return <Spinner />
 
   if (!workouts.length) {
     return (
@@ -83,7 +87,7 @@ export function HistoryPage() {
             {w.duration_minutes != null && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                {w.duration_minutes}m
+                {formatDuration(w.duration_minutes)}
               </span>
             )}
           </div>

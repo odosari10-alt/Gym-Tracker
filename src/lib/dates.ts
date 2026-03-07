@@ -24,6 +24,15 @@ export function durationMinutes(start: string, end: string): number {
   return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000)
 }
 
+export function formatDuration(minutes: number): string {
+  const totalSeconds = Math.round(minutes * 60)
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 export function nowISO(): string {
   return new Date().toISOString()
 }
