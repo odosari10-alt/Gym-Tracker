@@ -123,6 +123,24 @@ const gifMap: Record<string, string> = {
   'Cable Bicep Curl': 'https://static.exercisedb.dev/media/G08RZcQ.gif',
   'Glute Ham Raise': 'https://static.exercisedb.dev/media/aWedzZX.gif',
   'Reverse Hyperextension': 'https://static.exercisedb.dev/media/ila4NZS.gif',
+
+  // Cardio
+  'Treadmill Running': 'https://static.exercisedb.dev/media/rjiM4L3.gif',
+  'Incline Walking': 'https://static.exercisedb.dev/media/rjiM4L3.gif',
+  'Sprint Intervals': 'https://static.exercisedb.dev/media/Qoujh3Q.gif',
+  'Stationary Bike': 'https://static.exercisedb.dev/media/H1PESYI.gif',
+  'Air Bike': 'https://static.exercisedb.dev/media/1ZFqTDN.gif',
+  'Jump Rope': 'https://static.exercisedb.dev/media/e1e76I2.gif',
+  'Jumping Jacks': 'https://static.exercisedb.dev/media/HtfCpfi.gif',
+  'Jump Squats': 'https://static.exercisedb.dev/media/LIlE5Tn.gif',
+  'Broad Jumps': 'https://static.exercisedb.dev/media/uZKq7lo.gif',
+  'Burpees': 'https://static.exercisedb.dev/media/dK9394r.gif',
+  'Mountain Climbers': 'https://static.exercisedb.dev/media/RJgzwny.gif',
+  'Elliptical': 'https://static.exercisedb.dev/media/rjtuP6X.gif',
+  'Battle Ropes': 'https://static.exercisedb.dev/media/RJa4tCo.gif',
+  'Tire Flips': 'https://static.exercisedb.dev/media/oZjMu1t.gif',
+  "Farmer's Carry": 'https://static.exercisedb.dev/media/qPEzJjA.gif',
+  'Kettlebell Swings': 'https://static.exercisedb.dev/media/UHJlbu3.gif',
 }
 
 export function getExerciseGif(exerciseName: string): string | null {
