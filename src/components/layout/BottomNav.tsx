@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router'
-import { Home, ClipboardList, Dumbbell, BarChart3, Settings } from 'lucide-react'
+import { Home, Clock, ClipboardList, Dumbbell, BarChart3, Settings } from 'lucide-react'
 
 const tabs = [
   { to: '/', icon: Home, label: 'Home' },
+  { to: '/history', icon: Clock, label: 'History' },
   { to: '/templates', icon: ClipboardList, label: 'Templates' },
   { to: '/exercises', icon: Dumbbell, label: 'Exercises' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },

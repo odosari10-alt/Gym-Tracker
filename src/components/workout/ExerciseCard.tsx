@@ -1,6 +1,7 @@
 import { Trash2, Unlink, Dumbbell, Timer, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { SetRow } from './SetRow'
+import { CheckIcon } from '../ui/CheckIcon'
 import { getExerciseGif } from '../../lib/exerciseGifs'
 import { useDatabase } from '../../db/hooks/useDatabase'
 import type { WorkoutExercise, Set, WeightUnit } from '../../types'
@@ -21,6 +22,9 @@ interface ExerciseCardProps {
   unit: WeightUnit
   readOnly?: boolean
   supersetColor?: string
+  checkedSets?: globalThis.Set<number>
+  onToggleSetCheck?: (setId: number) => void
+  onToggleExerciseCheck?: (setIds: number[]) => void
   onAddSet: (workoutExerciseId: number) => void
   onUpdateSet: (setId: number, weightKg: number, reps: number, isWarmup: boolean, rpe: number | null) => void
   onDeleteSet: (setId: number) => void
@@ -31,6 +35,7 @@ interface ExerciseCardProps {
 
 export function ExerciseCard({
   workoutExercise, sets, unit, readOnly, supersetColor,
+  checkedSets, onToggleSetCheck, onToggleExerciseCheck,
   onAddSet, onUpdateSet, onDeleteSet, onRemoveExercise,
   onSuperset, onUnlinkSuperset
 }: ExerciseCardProps) {
@@ -38,10 +43,28 @@ export function ExerciseCard({
   const gifUrl = getExerciseGif(workoutExercise.exercise_name ?? '')
   const { restTimerSeconds, setRestTimerSeconds } = useDatabase()
 
+  const setIds = sets.map((s) => s.id)
+  const allChecked = sets.length > 0 && checkedSets != null && setIds.every((id) => checkedSets.has(id))
+  const someChecked = checkedSets != null && setIds.some((id) => checkedSets.has(id))
+
   return (
     <Card>
       <div className="flex items-center justify-between mb-3">
         <div className="min-w-0 flex-1 flex items-center gap-2">
+          {!readOnly && onToggleExerciseCheck && sets.length > 0 && (
+            <button
+              onClick={() => onToggleExerciseCheck(setIds)}
+              className={`w-7 h-7 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${
+                allChecked
+                  ? 'bg-primary border-primary'
+                  : someChecked
+                    ? 'border-primary bg-transparent'
+                    : 'border-text-muted/40 bg-transparent'
+              }`}
+            >
+              {(allChecked || someChecked) && <CheckIcon className={`w-4 h-4 ${allChecked ? 'text-white' : 'text-primary'}`} />}
+            </button>
+          )}
           {supersetColor && (
             <span
               className="w-1.5 h-8 rounded-full shrink-0"
@@ -92,11 +115,12 @@ export function ExerciseCard({
 
       {sets.length > 0 && (
         <div className="flex items-center gap-2 mb-1 px-0.5">
-          <span className="w-8 text-center text-[10px] text-text-muted font-semibold uppercase shrink-0">Set</span>
+          {!readOnly && <span className="w-10 shrink-0" />}
           <span className="flex-1 text-center text-[10px] text-text-muted font-semibold uppercase">{unit}</span>
           <span className="text-[10px] shrink-0">&nbsp;</span>
           <span className="flex-1 text-center text-[10px] text-text-muted font-semibold uppercase">Reps</span>
-          {!readOnly && <span className="w-[76px] shrink-0" />}
+          {!readOnly && <span className="w-[44px] shrink-0" />}
+          {!readOnly && onToggleSetCheck && <span className="w-6 shrink-0" />}
         </div>
       )}
 
@@ -133,6 +157,8 @@ export function ExerciseCard({
               set={s}
               unit={unit}
               readOnly={readOnly}
+              checked={checkedSets?.has(s.id)}
+              onToggleCheck={onToggleSetCheck}
               onUpdate={onUpdateSet}
               onDelete={onDeleteSet}
             />

@@ -7,7 +7,7 @@ import { getWeeklySummaries } from '../db/queries/analytics'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Spinner } from '../components/ui/Spinner'
-import { formatDate, formatDuration } from '../lib/dates'
+import { formatDuration, workoutTimeAgo } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
 import type { WorkoutSummary, WeeklySummary, Workout } from '../types'
 
@@ -112,7 +112,7 @@ export function HomePage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold">{formatDate(w.started_at)}</span>
+                    <span className="text-sm font-semibold">{workoutTimeAgo(w.started_at)}</span>
                   </div>
                   <div className="flex gap-3 text-xs text-text-muted font-medium">
                     <span>{w.exercise_count} ex</span>

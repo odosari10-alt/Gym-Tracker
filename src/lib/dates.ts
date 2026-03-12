@@ -16,6 +16,21 @@ export function timeAgo(iso: string): string {
   return formatDistanceToNow(parseISO(iso), { addSuffix: true })
 }
 
+export function workoutTimeAgo(iso: string): string {
+  const now = Date.now()
+  const then = parseISO(iso).getTime()
+  const diffMs = now - then
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffWeeks = Math.floor(diffDays / 7)
+
+  if (diffHours < 1) return 'Just now'
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffWeeks <= 4) return `${diffWeeks}w ago`
+  return format(parseISO(iso), 'MMM d, yyyy')
+}
+
 export function getWeekStart(iso: string): string {
   return startOfWeek(parseISO(iso), { weekStartsOn: 1 }).toISOString()
 }

@@ -29,6 +29,7 @@ export function WorkoutPage() {
   const [showDiscard, setShowDiscard] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const [supersetPickerFor, setSupersetPickerFor] = useState<number | null>(null)
+  const [checkedSets, setCheckedSets] = useState<globalThis.Set<number>>(new Set())
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([])
   const [templates, setTemplates] = useState<TemplateWithDays[]>([])
@@ -46,14 +47,18 @@ export function WorkoutPage() {
 
   useEffect(() => {
     ;(async () => {
-      const active = await getActiveWorkout()
-      if (active) {
-        setWorkoutId(active.id)
-        setStartedAt(active.started_at)
-      } else {
-        const id = await startWorkout()
-        setWorkoutId(id)
-        setStartedAt(new Date().toISOString())
+      try {
+        const active = await getActiveWorkout()
+        if (active) {
+          setWorkoutId(active.id)
+          setStartedAt(active.started_at)
+        } else {
+          const id = await startWorkout()
+          setWorkoutId(id)
+          setStartedAt(new Date().toISOString())
+        }
+      } catch (err) {
+        console.error('Failed to start workout:', err)
       }
     })()
   }, [])
@@ -109,16 +114,28 @@ export function WorkoutPage() {
     reload()
   }, [workoutId])
 
+  const totalSets = useMemo(() => {
+    return Object.values(setsMap).reduce((sum, sets) => sum + sets.length, 0)
+  }, [setsMap])
+
+  const hasCheckedSets = checkedSets.size > 0
+
   const handleFinish = useCallback(async () => {
     if (!workoutId) return
     try {
+      if (totalSets > 0) {
+        const pct = Math.round((checkedSets.size / totalSets) * 100)
+        const stored = JSON.parse(localStorage.getItem('gym-tracker-completion') || '{}')
+        stored[workoutId] = pct
+        localStorage.setItem('gym-tracker-completion', JSON.stringify(stored))
+      }
       await finishWorkout(workoutId)
       navigate('/')
     } catch (err) {
       console.error('Failed to finish workout:', err)
       alert('Failed to finish workout. Please try again.')
     }
-  }, [workoutId, navigate])
+  }, [workoutId, navigate, checkedSets, totalSets])
 
   const handleDiscard = useCallback(async () => {
     if (!workoutId) return
@@ -141,6 +158,28 @@ export function WorkoutPage() {
   const handleUnlinkSuperset = useCallback(async (supersetGroup: number) => {
     await unlinkSuperset(supersetGroup)
     reload()
+  }, [])
+
+  const handleToggleSetCheck = useCallback((setId: number) => {
+    setCheckedSets((prev) => {
+      const next = new Set(prev)
+      if (next.has(setId)) next.delete(setId)
+      else next.add(setId)
+      return next
+    })
+  }, [])
+
+  const handleToggleExerciseCheck = useCallback((setIds: number[]) => {
+    setCheckedSets((prev) => {
+      const next = new Set(prev)
+      const allChecked = setIds.every((id) => next.has(id))
+      if (allChecked) {
+        setIds.forEach((id) => next.delete(id))
+      } else {
+        setIds.forEach((id) => next.add(id))
+      }
+      return next
+    })
   }, [])
 
   const SUPERSET_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
@@ -192,7 +231,7 @@ export function WorkoutPage() {
             {startedAt && <WorkoutTimer startedAt={startedAt} />}
           </div>
         </div>
-        <Button size="sm" onClick={() => setShowFinish(true)} disabled={exercises.length === 0}>
+        <Button size="sm" onClick={() => setShowFinish(true)} disabled={!hasCheckedSets}>
           <Check className="h-4 w-4" /> Finish
         </Button>
       </header>
@@ -239,6 +278,9 @@ export function WorkoutPage() {
                       sets={setsMap[we.id] ?? []}
                       unit={unit}
                       supersetColor={color}
+                      checkedSets={checkedSets}
+                      onToggleSetCheck={handleToggleSetCheck}
+                      onToggleExerciseCheck={handleToggleExerciseCheck}
                       onAddSet={handleAddSet}
                       onUpdateSet={handleUpdateSet}
                       onDeleteSet={handleDeleteSet}
@@ -257,6 +299,9 @@ export function WorkoutPage() {
                 workoutExercise={we}
                 sets={setsMap[we.id] ?? []}
                 unit={unit}
+                checkedSets={checkedSets}
+                onToggleSetCheck={handleToggleSetCheck}
+                onToggleExerciseCheck={handleToggleExerciseCheck}
                 onAddSet={handleAddSet}
                 onUpdateSet={handleUpdateSet}
                 onDeleteSet={handleDeleteSet}

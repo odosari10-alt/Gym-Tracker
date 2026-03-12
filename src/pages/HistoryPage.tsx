@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router'
-import { ArrowLeft, Calendar, Clock, Dumbbell, Weight, Trash2 } from 'lucide-react'
+import { Calendar, Clock, Dumbbell, Weight, Trash2, CircleCheck } from 'lucide-react'
 import { useDatabase } from '../db/hooks/useDatabase'
 import { getWorkoutSummaries, deleteWorkout } from '../db/queries/workouts'
 import { Card } from '../components/ui/Card'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Spinner } from '../components/ui/Spinner'
-import { formatDate, formatTime, formatDuration } from '../lib/dates'
+import { formatTime, formatDuration, workoutTimeAgo } from '../lib/dates'
 import { formatWeight } from '../lib/formulas'
 import type { WorkoutSummary } from '../types'
 
@@ -17,6 +17,7 @@ export function HistoryPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [workouts, setWorkouts] = useState<WorkoutSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [completionMap, setCompletionMap] = useState<Record<string, number>>({})
 
   const handleDelete = useCallback(async () => {
     if (deleteId == null) return
@@ -31,6 +32,10 @@ export function HistoryPage() {
       .then(setWorkouts)
       .catch((err) => console.error('Failed to load history:', err))
       .finally(() => setLoading(false))
+    try {
+      const stored = JSON.parse(localStorage.getItem('gym-tracker-completion') || '{}')
+      setCompletionMap(stored)
+    } catch { /* ignore */ }
   }, [refresh])
 
   if (loading) return <Spinner />
@@ -47,21 +52,13 @@ export function HistoryPage() {
 
   return (
     <div className="py-4 flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate('/')}
-          className="p-1.5 rounded-xl text-text-muted hover:text-primary active:text-primary transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <h2 className="text-xl font-extrabold tracking-tight">Workout History</h2>
-      </div>
+      <h2 className="text-xl font-extrabold tracking-tight">Workout History</h2>
       {workouts.map((w) => (
         <Card key={w.id} className="active:bg-surface-hover transition-colors">
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2 text-text-primary font-semibold flex-1 cursor-pointer" onClick={() => navigate(`/workout/${w.id}`)}>
               <Calendar className="h-4 w-4 text-primary" />
-              {formatDate(w.started_at)}
+              {workoutTimeAgo(w.started_at)}
             </div>
             <div className="flex items-center gap-2">
               {w.finished_at && (
@@ -75,7 +72,7 @@ export function HistoryPage() {
               </button>
             </div>
           </div>
-          <div className="flex gap-4 text-sm text-text-muted cursor-pointer" onClick={() => navigate(`/workout/${w.id}`)}>
+          <div className="flex gap-4 text-sm text-text-muted cursor-pointer flex-wrap" onClick={() => navigate(`/workout/${w.id}`)}>
             <span className="flex items-center gap-1">
               <Dumbbell className="h-3.5 w-3.5" />
               {w.exercise_count} exercises
@@ -88,6 +85,12 @@ export function HistoryPage() {
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 {formatDuration(w.duration_minutes)}
+              </span>
+            )}
+            {completionMap[w.id] != null && (
+              <span className={`flex items-center gap-1 font-semibold ${completionMap[w.id] === 100 ? 'text-green-500' : 'text-primary'}`}>
+                <CircleCheck className="h-3.5 w-3.5" />
+                {completionMap[w.id]}%
               </span>
             )}
           </div>

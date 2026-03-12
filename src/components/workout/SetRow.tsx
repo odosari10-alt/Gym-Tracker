@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { CheckIcon } from '../ui/CheckIcon'
 import type { Set, WeightUnit } from '../../types'
 import { convertWeight, toKg } from '../../lib/formulas'
 
@@ -6,18 +7,25 @@ interface SetRowProps {
   set: Set
   unit: WeightUnit
   readOnly?: boolean
+  checked?: boolean
+  onToggleCheck?: (setId: number) => void
   onUpdate: (setId: number, weightKg: number, reps: number, isWarmup: boolean, rpe: number | null) => void
   onDelete: (setId: number) => void
 }
 
-export function SetRow({ set, unit, readOnly, onUpdate, onDelete }: SetRowProps) {
+export function SetRow({ set, unit, readOnly, checked, onToggleCheck, onUpdate, onDelete }: SetRowProps) {
   const displayWeight = Number(convertWeight(set.weight_kg, unit).toFixed(1))
 
   return (
     <div className={`flex items-center gap-2 py-1.5 ${set.is_warmup ? 'opacity-50' : ''}`}>
-      <span className="w-8 text-center text-xs text-text-muted font-medium shrink-0">
-        {set.is_warmup ? 'W' : set.set_number}
-      </span>
+      {!readOnly && (
+        <button
+          onClick={() => onDelete(set.id)}
+          className="p-2 text-text-muted hover:text-danger active:text-danger transition-colors shrink-0"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      )}
       <div className="flex flex-col items-center flex-1 min-w-0">
         {!readOnly && (
           <button
@@ -84,12 +92,18 @@ export function SetRow({ set, unit, readOnly, onUpdate, onDelete }: SetRowProps)
           >
             W
           </button>
-          <button
-            onClick={() => onDelete(set.id)}
-            className="p-2 text-text-muted hover:text-danger active:text-danger transition-colors shrink-0"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {onToggleCheck && (
+            <button
+              onClick={() => onToggleCheck(set.id)}
+              className={`w-6 h-6 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${
+                checked
+                  ? 'bg-primary border-primary'
+                  : 'border-text-muted/40 bg-transparent'
+              }`}
+            >
+              {checked && <CheckIcon className="w-4 h-4 text-white" />}
+            </button>
+          )}
         </>
       )}
     </div>
